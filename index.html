@@ -135,7 +135,7 @@
                             displayInfo += "You Recieve: " + (orderData.makerAmount / Math.pow(10, tokenInfo.toToken.decimals))
                                 + " <a href=\"" + chainURL + fromToken + "\">" + tokenInfo.toToken.symbol + "</a>" + "\n";
 
-                            displayInfo += "Left to Fill: " + amount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
+                            displayInfo += "Left to Fill: " + orderData.remainingMakerAmount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
                             //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orderData.data) + ">Cancel order?</button>\n";
 
                             $('#results').append(displayInfo + '<hr>');
@@ -161,7 +161,7 @@
                                 + " <a href=\"" + chainURL + fromToken + "\">" + tokenInfo.toToken.symbol + "</a>" + "\n";
 
 
-                            displayInfo += "Left to Fill: " + amount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
+                            displayInfo += "Left to Fill: " + orderData.remainingMakerAmount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
                             //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orderData.data) + ">Cancel order?</button>\n";
 
                             $('#results').append(displayInfo + '<hr>');
