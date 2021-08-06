@@ -4,18 +4,31 @@
 <head>
     <script type="text/json"
         src="https://cdn.jsdelivr.net/npm/@1inch/limit-order-protocol@1.3.0/abi/LimitOrderProtocol.json"></script>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.3.6/dist/web3.min.js" type="text/javascript"></script>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <script async>
 
         localStorage.setItem("page", 1);
 
+
         let chainId = 1; //it's 1 by default
         let tokenlist;
         let provider;
         let signer;
-        let abi = "";
+        let abi = [
+            // Read-Only Functions
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function symbol() view returns (string)"];
+
+        const infurakey = "52aee165600a40718b05b78def0c0212";
+        const matickey = "f62616deb8a61369fca6066adc6e71858f8f36b3";
+
+
+        let ethProvider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/" + infurakey)
+        let bscProvider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        let polyProvider = new ethers.providers.JsonRpcProvider("https://rpc-mainnet.maticvigil.com/v1/" + matickey)
 
         let ethplorerKey = "freekey";
 
@@ -45,24 +58,16 @@
                     chainId = document.getElementById("drop-down").value;
 
                     $('#results').text(""); //delete results
+
                     try {
-                        await $.ajax({ method: "GET", url: "https://apiv4.paraswap.io/v2/tokens/" + chainId }).done((ret) => {
-                            tokenlist = ret.tokens;
-                        })
-                    }
-                    catch (e) {
-                        //tokenlist fallback
-                        try {
-                            await $.ajax({ method: "GET", url: "https://tokens.1inch.exchange/v1.1/" + chainId }).done((ret) =>
-                                tokenlist = ret)
-                        } catch (e) {
-                            alert("an error has occured, orders may not load");
-                        }
+                        await $.ajax({ method: "GET", url: "https://tokens.1inch.exchange/v1.1/" + chainId }).done((ret) =>
+                            tokenlist = ret)
+                    } catch (e) {
+                        alert("an error has occured, orders may not load");
                     }
 
                     if (address != "")
                         getAddressLOList(address, chainId)
-
 
                 }
 
@@ -78,9 +83,7 @@
                 async function parseAddressLOResults(orders, address, chain) {
                     let fromToken;
                     let toToken;
-                    let url = 'https://api.1inch.exchange/v3.0/' + chain + '/quote?' //'fromTokenAddress=' + fromToken + '&toTokenAddress=' + toToken + '&amount=1000000000000000000'
-                    let tokenInfo;
-
+                    let tokenInfo = { "fromToken": {}, "toToken": {} };
                     let scan = getBlockchainScannerForToken(chain);
 
                     for (let i = 0; i < orders.length; i++) {
@@ -91,77 +94,153 @@
                             fromToken = orders[i].data.makerAsset;
                         if (toToken != orders[i].data.takerAsset)
                             toToken = orders[i].data.takerAsset;
-                        try {
-                            if (tokenlist[tokenlist.findIndex(item => item.address === orders[i].data.makerAsset)].decimals < 18) //if the maker token has less than 18 dcimals
-                                orders[i].remainingMakerAmount = (orders[i].remainingMakerAmount * Math.pow(10, 18 - orders[i].fromTokenInfo.decimals)); //pad until 18 decimals
-                        } catch (e) {
-                            console.log("Can't pad, assuming makerAmount has 18 decimals");
+
+                        //absolute mess
+                        switch (chain) {
+                            case "1":
+                                if (tokenlist.hasOwnProperty(fromToken)) {
+                                    fromTokenSymbol = tokenlist[fromToken].symbol
+                                    fromTokenDecimals = tokenlist[fromToken].decimals
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+                                }
+                                else {
+                                    fromTokenContract = await new ethers.Contract(fromToken, abi, provider);
+                                    fromTokenSymbol = await fromTokenContract.symbol();
+                                    fromTokenDecimals = await fromTokenContract.decimals();
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+
+                                }
+                                if (tokenlist.hasOwnProperty(toToken)) {
+                                    toTokenSymbol = tokenlist[toToken].symbol
+                                    toTokenDecimals = tokenlist[toToken].decimals
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                }
+                                else {
+                                    toTokenContract = await new ethers.Contract(toToken, abi, provider);
+                                    toTokenSymbol = await toTokenContract.symbol();
+                                    toTokenDecimals = await toTokenContract.decimals();
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                }
+                                break;
+                            case "56":
+                                if (tokenlist.hasOwnProperty(fromToken)) {
+                                    fromTokenSymbol = tokenlist[fromToken].symbol
+                                    fromTokenDecimals = tokenlist[fromToken].decimals
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+                                } else {
+                                    fromTokenContract = await new ethers.Contract(fromToken, abi, provider);
+                                    fromTokenSymbol = await fromTokenContract.symbol();
+                                    fromTokenDecimals = await fromTokenContract.decimals();
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+                                }
+                                if (tokenlist.hasOwnProperty(toToken)) {
+                                    toTokenSymbol = tokenlist[toToken].symbol
+                                    toTokenDecimals = tokenlist[toToken].decimals
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                } else {
+                                    toTokenContract = await new ethers.Contract(toToken, abi, provider);
+                                    toTokenSymbol = await toTokenContract.symbol();
+                                    toTokenDecimals = await toTokenContract.decimals();
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                }
+                                break;
+                            case "137":
+                                if (tokenlist.hasOwnProperty(fromToken)) {
+                                    fromTokenSymbol = tokenlist[fromToken].symbol
+                                    fromTokenDecimals = tokenlist[fromToken].decimals
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+                                } else {
+                                    fromTokenContract = await new ethers.Contract(fromToken, abi, provider);
+                                    fromTokenSymbol = await toTokenContract.symbol();
+                                    fromTokenDecimals = await toTokenContract.decimals();
+                                    //build and add to list
+                                    fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
+                                    tokenInfo["fromToken"] = fromTokenInfo;
+                                }
+                                if (tokenlist.hasOwnProperty(toToken)) {
+                                    toTokenSymbol = tokenlist[toToken].symbol
+                                    toTokenDecimals = tokenlist[toToken].decimals
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                } else {
+                                    toTokenContract = await new ethers.Contract(toToken, abi, provider);
+                                    toTokenSymbol = await toTokenContract.symbol();
+                                    toTokenDecimals = await toTokenContract.decimals();
+                                    //build and add to list
+                                    toTokenInfo = { "symbol": toTokenSymbol, "decimals": toTokenDecimals };
+                                    tokenInfo["toToken"] = toTokenInfo
+                                }
+                                break;
                         }
 
-                        if ( //if offerRecieve fails, try the next
-                            await offerRecieve(url, toToken, fromToken, orders[i].remainingMakerAmount, orders[i], scan)
-                        ) {
-                            if (
-                                await offerRecieveFlipped(url, toToken, fromToken, orders[i].remainingMakerAmount, orders[i], scan)
-                            ) {
-                                $('#results').append("Unable to find token info for " + toToken + " to " + fromToken + '<hr>');
-                            }
-                        }
-                        // } else {
-                        //     let displayInfo = "";
-                        //     displayInfo += "Your Offer: " + (orders[i].makerAmount / Math.pow(10, tokenInfo.fromToken.decimals))
-                        //         + " <a href=\"" + scan + fromToken + "\">" + tokenInfo.fromToken.symbol + "</a>" + "\n";
-                        //     displayInfo += "You Recieve: " + (orders[i].takerAmount / Math.pow(10, tokenInfo.toToken.decimals))
-                        //         + " <a href=\"" + scan + toToken + "\">" + tokenInfo.toToken.symbol + "</a>";
+                        //console.log("waiting");
+                        offerRecieve(toToken, fromToken, orders[i].remainingMakerAmount, orders[i], scan, tokenInfo)
 
-                        //     //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orders[i].data) + ">Cancel order?</button>\n";
-
-                        //     displayInfo += "Left to Fill: " + orders[i].remainingMakerAmount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
-
-                        //     $('#results').append(displayInfo + '<hr>');
-                        // }
                     }
                 }
 
-                                async function offerRecieve(url, toToken, fromToken, amount, orderData, chainURL) {
+                async function offerRecieve(toToken, fromToken, amount, orderData, chainURL, tokenInfo) {
                     let displayInfo = "";
+
+                    console.log(tokenInfo)
+
                     try {
-                        await $.ajax({ method: "GET", dataType: "json", url: url + 'fromTokenAddress=' + toToken + '&toTokenAddress=' + fromToken + '&amount=' + amount }).done((ret) => {
-                            console.log(ret);
-                            tokenInfo = ret;
+                        //await $.ajax({ method: "GET", dataType: "json", url: url + 'fromTokenAddress=' + toToken + '&toTokenAddress=' + fromToken + '&amount=' + amount.toLocalString() }).done((ret) => {
 
-                            displayInfo += "Your Offer: " + (orderData.takerAmount / Math.pow(10, tokenInfo.fromToken.decimals))
-                                + " <a href=\"" + chainURL + toToken + "\">" + tokenInfo.fromToken.symbol + "</a>" + "\n";
-                            displayInfo += "You Recieve: " + (orderData.makerAmount / Math.pow(10, tokenInfo.toToken.decimals))
-                                + " <a href=\"" + chainURL + fromToken + "\">" + tokenInfo.toToken.symbol + "</a>" + "\n";
 
-                            displayInfo += "Left to Fill: " + amount / Math.pow(10, tokenInfo.toToken.decimals) + " " + tokenInfo.toToken.symbol + "\n";
-                            //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orderData.data) + ">Cancel order?</button>\n";
 
-                            $('#results').append(displayInfo + '<hr>');
-                        })
+                        displayInfo += "Your Offer: " + (orderData.makerAmount / Math.pow(10, tokenInfo.fromToken.decimals))
+                            + " <a href=\"" + chainURL + fromToken + "\">" + tokenInfo.fromToken.symbol + "</a>" + "\n";
+                        console.log("built first part")
+                        displayInfo += "Your Recieve: " + (orderData.takerAmount / Math.pow(10, tokenInfo.toToken.decimals))
+                            + " <a href=\"" + chainURL + toToken + "\">" + tokenInfo.toToken.symbol + "</a>" + "\n";
+                        console.log("built second part");
+                        displayInfo += "Left to Fill: " + amount / Math.pow(10, tokenInfo.fromToken.decimals) + " " + tokenInfo.fromToken.symbol + "\n";
+                        //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orderData.data) + ">Cancel order?</button>\n";
+
+                        $('#results').append(displayInfo + '<hr>');
+                        //})
                     }
                     catch (e) {
-                        return true; //return true upon failure
+                        console.log(e);
                     }
-                    return false; //return false if it works
+                    console.log("Success");
                 }
 
                 async function offerRecieveFlipped(url, toToken, fromToken, amount, orderData, chainURL) {
                     let displayInfo = "";
                     console.log("Flipping quote");
                     try {
-                        await $.ajax({ method: "GET", dataType: "json", url: url + 'fromTokenAddress=' + fromToken + '&toTokenAddress=' + toToken + '&amount=' + amount }).done((ret) => {
+                        await $.ajax({ method: "GET", dataType: "json", url: url + 'fromTokenAddress=' + fromToken + '&toTokenAddress=' + toToken + '&amount=' + amount.toLocalString() }).done((ret) => {
                             console.log(ret);
                             tokenInfo = ret;
 
-                            displayInfo += "Your Offer: " + (orderData.makerAmount / Math.pow(10, tokenInfo.fromToken.decimals))
+                            displayInfo += "Your Offer: " + (orderData.makerAmount / Math.pow(10, 18))
                                 + " <a href=\"" + chainURL + toToken + "\">" + tokenInfo.fromToken.symbol + "</a>" + "\n";
-                            displayInfo += "You Recieve: " + (orderData.takerAmount / Math.pow(10, tokenInfo.toToken.decimals))
+                            displayInfo += "You Recieve: " + (orderData.takerAmount / Math.pow(10, 18))
                                 + " <a href=\"" + chainURL + fromToken + "\">" + tokenInfo.toToken.symbol + "</a>" + "\n";
 
 
-                            displayInfo += "Left to Fill: " + amount / Math.pow(10, tokenInfo.toToken.decimals) + " " + tokenInfo.toToken.symbol + "\n";
+                            displayInfo += "Left to Fill: " + amount / Math.pow(10, 18) + " " + tokenInfo.toToken.symbol + "\n";
                             //displayInfo += "<button onClick=\"cancelOrder(this.value)\" value=" + JSON.stringify(orderData.data) + ">Cancel order?</button>\n";
 
                             $('#results').append(displayInfo + '<hr>');
@@ -171,6 +250,7 @@
                     }
                     return false; //return false if it works
                 }
+
 
                 function getBlockchainScannerForToken(chain) {
                     switch (chain) {
