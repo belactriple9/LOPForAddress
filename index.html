@@ -4,7 +4,7 @@
 <head>
     <script type="text/json"
         src="https://cdn.jsdelivr.net/npm/@1inch/limit-order-protocol@1.3.0/abi/LimitOrderProtocol.json"></script>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.3.6/dist/web3.min.js" type="text/javascript"></script>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <script async>
@@ -169,8 +169,8 @@
                                     tokenInfo["fromToken"] = fromTokenInfo;
                                 } else {
                                     fromTokenContract = await new ethers.Contract(fromToken, abi, provider);
-                                    fromTokenSymbol = await toTokenContract.symbol();
-                                    fromTokenDecimals = await toTokenContract.decimals();
+                                    fromTokenSymbol = await fromTokenContract.symbol();
+                                    fromTokenDecimals = await fromTokenContract.decimals();
                                     //build and add to list
                                     fromTokenInfo = { "symbol": fromTokenSymbol, "decimals": fromTokenDecimals };
                                     tokenInfo["fromToken"] = fromTokenInfo;
