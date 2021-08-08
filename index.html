@@ -86,6 +86,19 @@
                     let tokenInfo = { "fromToken": {}, "toToken": {} };
                     let scan = getBlockchainScannerForToken(chain);
 
+                    switch (chain) {
+                        case "1":
+                            provider = ethProvider;
+                            break;
+                        case "56":
+                            provider = bscProvider;
+                            break;
+                        case "137":
+                            provider = polyProvider;
+                            break;
+
+                    }
+
                     for (let i = 0; i < orders.length; i++) {
 
 
